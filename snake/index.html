@@ -365,6 +365,9 @@
                 <a href="../index.html" class="button" id="home-button">
                     <span>🏠</span> Home
                 </a>
+                <button id="toggle-boundaries-button" class="button">
+                    <span>🔄</span> Boundaries: Wrap
+                </button>
                 <button id="new-game-button">
                     <span>🐍</span> New Game
                 </button>
@@ -399,6 +402,7 @@
     const newGameButton = document.getElementById('new-game-button');
     const scoreValueDisplay = document.getElementById('score-value');
     const themeToggleButton = document.getElementById('theme-toggle');
+    const toggleBoundariesButton = document.getElementById('toggle-boundaries-button'); // ADDED
 
     const modal = document.getElementById('game-modal');
     const modalStatusIcon = document.getElementById('modal-status-icon');
@@ -420,7 +424,9 @@
     let gameLoopInterval = null;
     let gameSpeed = 150; // Milliseconds
     let gameOver = false;
+    let gameActive = false; // ADDED: Tracks if the game is running (post-first move)
     let darkMode = false;
+    let boundaryCollisionEnabled = false; // ADDED: false = wrap, true = collide
     let touchStartX = 0;
     let touchStartY = 0;
 
@@ -442,6 +448,8 @@
              cellSize = Math.floor((maxCanvasWidth -2) / gridWidth); // -2 for safety margin
         }
         if (cellSize <=0) cellSize = baseCellSize; // Fallback if calculation is too small
+        if (gridWidth <=0) gridWidth = 1; // Prevent gridWidth from being 0 or less
+        if (gridHeight <=0) gridHeight = 1; // Prevent gridHeight from being 0 or less
 
 
         canvas.width = cellSize * gridWidth;
@@ -451,11 +459,26 @@
 
     function initGame() {
         gameOver = false;
+        gameActive = false; // ADDED: Reset gameActive state
         direction = 'right';
         newDirection = 'right';
         score = 0;
         scoreValueDisplay.textContent = score;
         gameSpeed = 150;
+
+        // Load boundary collision preference
+        const savedBoundaryCollision = localStorage.getItem('snakeBoundaryCollision');
+        if (savedBoundaryCollision !== null) {
+            boundaryCollisionEnabled = savedBoundaryCollision === 'true';
+        } else {
+            boundaryCollisionEnabled = false; // Default to wrap if nothing saved
+        }
+        updateBoundaryButtonText(); // Set initial button text
+
+        if (gameLoopInterval) { // MODIFIED: Clear any existing game loop and nullify
+            clearInterval(gameLoopInterval);
+            gameLoopInterval = null;
+        }
 
         updateCanvasDimensions();
 
@@ -469,25 +492,46 @@
 
         spawnFood();
         
-        if (gameLoopInterval) clearInterval(gameLoopInterval);
-        gameLoopInterval = setInterval(gameLoop, gameSpeed);
+        // REMOVED: gameLoopInterval = setInterval(gameLoop, gameSpeed); 
 
         hideModal();
-        drawGame();
+        drawGame(); // Ensure initial state is drawn
     }
 
     function gameLoop() {
         if (gameOver) {
-            clearInterval(gameLoopInterval);
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+                gameLoopInterval = null;
+            }
             showGameOverModal();
             return;
         }
+
         direction = newDirection; // Apply buffered direction
-        moveSnake();
-        checkCollision();
-        if (!gameOver) {
-             drawGame();
+        moveSnake(); 
+
+        if (gameOver) { // Check if moveSnake resulted in game over (e.g., wall collision)
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+                gameLoopInterval = null;
+            }
+            showGameOverModal();
+            return;
         }
+
+        checkCollision(); // Check for self-collision
+
+        if (gameOver) { // Check if checkCollision resulted in game over
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+                gameLoopInterval = null;
+            }
+            showGameOverModal();
+            return;
+        }
+
+        drawGame();
     }
 
     function drawGame() {
@@ -523,18 +567,28 @@
             case 'right': head.x++; break;
         }
 
-        // Implement wraparound map behavior
-        if (head.x < 0) {
-            head.x = gridWidth - 1;
-        } else if (head.x >= gridWidth) {
-            head.x = 0;
-        }
-        if (head.y < 0) {
-            head.y = gridHeight - 1;
-        } else if (head.y >= gridHeight) {
-            head.y = 0;
+        if (boundaryCollisionEnabled) {
+            if (head.x < 0 || head.x >= gridWidth || head.y < 0 || head.y >= gridHeight) {
+                gameOver = true;
+                return; // Exit early, gameLoop will handle modal and clearing interval
+            }
+        } else {
+            // Implement wraparound map behavior
+            if (head.x < 0) {
+                head.x = gridWidth - 1;
+            } else if (head.x >= gridWidth) {
+                head.x = 0;
+            }
+            if (head.y < 0) {
+                head.y = gridHeight - 1;
+            } else if (head.y >= gridHeight) {
+                head.y = 0;
+            }
         }
 
+        // If gameOver was set by boundary collision, snake array is not modified by this point.
+        // The function returned early.
+        // If not gameOver, proceed to update snake.
         snake.unshift(head);
 
         if (head.x === food.x && head.y === food.y) {
@@ -580,17 +634,29 @@
     }
 
     function handleKeyPress(event) {
-        if (gameOver && event.key !== 'Enter') return;
         if (event.key === 'Enter' && gameOver) {
             initGame();
             return;
         }
+        if (gameOver) return;
+
         const key = event.key;
+        let pressedDirection = null;
         
-        if ((key === 'ArrowUp' || key.toLowerCase() === 'w') && direction !== 'down') newDirection = 'up';
-        else if ((key === 'ArrowDown' || key.toLowerCase() === 's') && direction !== 'up') newDirection = 'down';
-        else if ((key === 'ArrowLeft' || key.toLowerCase() === 'a') && direction !== 'right') newDirection = 'left';
-        else if ((key === 'ArrowRight' || key.toLowerCase() === 'd') && direction !== 'left') newDirection = 'right';
+        if ((key === 'ArrowUp' || key.toLowerCase() === 'w') && direction !== 'down') pressedDirection = 'up';
+        else if ((key === 'ArrowDown' || key.toLowerCase() === 's') && direction !== 'up') pressedDirection = 'down';
+        else if ((key === 'ArrowLeft' || key.toLowerCase() === 'a') && direction !== 'right') pressedDirection = 'left';
+        else if ((key === 'ArrowRight' || key.toLowerCase() === 'd') && direction !== 'left') pressedDirection = 'right';
+
+        if (pressedDirection) {
+            newDirection = pressedDirection;
+            if (!gameActive) {
+                gameActive = true;
+                if (!gameLoopInterval) { // Start loop if not already started (e.g., by touch)
+                    gameLoopInterval = setInterval(gameLoop, gameSpeed);
+                }
+            }
+        }
     }
     
     function handleTouchStart(event) {
@@ -610,18 +676,29 @@
         const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
         const sensitivity = 10; // Minimum pixel change to register as a swipe
+        let swipeDirection = null; // ADDED: To store determined swipe direction
 
         if (Math.abs(diffX) > Math.abs(diffY)) { // Horizontal swipe
-            if (diffX > sensitivity && direction !== 'left') newDirection = 'right';
-            else if (diffX < -sensitivity && direction !== 'right') newDirection = 'left';
+            if (diffX > sensitivity && direction !== 'left') swipeDirection = 'right';
+            else if (diffX < -sensitivity && direction !== 'right') swipeDirection = 'left';
         } else { // Vertical swipe
-            if (diffY > sensitivity && direction !== 'up') newDirection = 'down';
-            else if (diffY < -sensitivity && direction !== 'down') newDirection = 'up';
+            if (diffY > sensitivity && direction !== 'up') swipeDirection = 'down';
+            else if (diffY < -sensitivity && direction !== 'down') swipeDirection = 'up';
         }
         
+        if (swipeDirection) { // ADDED: If a swipe was determined
+            newDirection = swipeDirection;
+            if (!gameActive) {
+                gameActive = true;
+                if (!gameLoopInterval) { // Start loop if not already started (e.g., by keypress)
+                    gameLoopInterval = setInterval(gameLoop, gameSpeed);
+                }
+            }
+        }
+
         touchStartX = 0; 
         touchStartY = 0;
-        event.preventDefault(); 
+        if (event.cancelable) event.preventDefault();  // Check if cancelable
     }
 
 
@@ -633,6 +710,16 @@
 
     function hideModal() {
         modal.classList.remove('show');
+    }
+
+    function updateBoundaryButtonText() {
+        toggleBoundariesButton.innerHTML = `<span>${boundaryCollisionEnabled ? '🧱' : '🔄'}</span> Boundaries: ${boundaryCollisionEnabled ? 'Collide' : 'Wrap'}`;
+    }
+
+    function toggleBoundaryCollision() {
+        boundaryCollisionEnabled = !boundaryCollisionEnabled;
+        updateBoundaryButtonText();
+        localStorage.setItem('snakeBoundaryCollision', boundaryCollisionEnabled.toString());
     }
 
     function toggleDarkMode() {
@@ -657,23 +744,32 @@
     });
     document.addEventListener('keydown', handleKeyPress);
     themeToggleButton.addEventListener('click', toggleDarkMode);
+    toggleBoundariesButton.addEventListener('click', toggleBoundaryCollision); // ADDED
     
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
 
     window.addEventListener('resize', () => {
         const wasGameOver = gameOver;
-        if (gameLoopInterval) clearInterval(gameLoopInterval); // Pause game during resize
-        updateCanvasDimensions();
-        if (!wasGameOver) {
-            drawGame(); // Redraw with new dimensions
-            if (snake.length > 0) { // Resume game if it was running
-                 gameLoopInterval = setInterval(gameLoop, gameSpeed);
-            }
-        } else {
-            drawGame(); // Just redraw board if game was over
-            showGameOverModal(); // And ensure modal is visible if it was
+        const wasGameActive = gameActive; // ADDED: Store current active state
+
+        if (gameLoopInterval) {
+            clearInterval(gameLoopInterval);
+            gameLoopInterval = null; // MODIFIED: Important to nullify
         }
+        // gameActive state is preserved by wasGameActive for restarting loop if needed
+
+        updateCanvasDimensions();
+        drawGame(); // Redraw with new dimensions
+
+        if (wasGameOver) {
+            showGameOverModal(); // Ensure modal is visible if it was
+        } else if (wasGameActive) { // MODIFIED: Only resume if it was active and not game over
+            // gameActive remains true from wasGameActive
+            gameLoopInterval = setInterval(gameLoop, gameSpeed);
+        }
+        // If !wasGameOver && !wasGameActive (i.e., waiting for first move), 
+        // game remains paused. drawGame() has updated the view.
     });
     
     window.addEventListener('load', () => {
