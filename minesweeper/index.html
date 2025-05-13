@@ -114,7 +114,7 @@
             box-shadow: 0 0 0 2px var(--primary-light);
         }
         
-        button {
+        button, a.button {
             padding: 10px 20px;
             font-family: 'Montserrat', sans-serif;
             font-size: 0.9rem;
@@ -128,9 +128,10 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            text-decoration: none; /* Added for a.button */
         }
         
-        button:hover {
+        button:hover, a.button:hover {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
@@ -398,6 +399,10 @@
             background-color: transparent;
             color: var(--dark);
             border: 2px solid var(--gray);
+            text-decoration: none;
+            align-items: center;
+            justify-content: center;
+            display: flex;
         }
         
         .secondary-button:hover {
@@ -530,6 +535,9 @@
         
         <div class="controls-panel">
             <div class="controls">
+                <a href="../index.html" class="button" id="home-button">
+                    <span>🏠</span> Home
+                </a>
                 <div class="select-wrapper">
                     <select id="difficulty">
                         <option value="beginner">Beginner (9×9)</option>
@@ -590,6 +598,7 @@
             <p id="modal-message"></p>
             <div class="modal-buttons">
                 <button id="modal-new-game" class="modal-button primary-button">New Game</button>
+                <a href="../index.html" class="modal-button secondary-button">Home</a>
                 <button id="modal-close" class="modal-button secondary-button">Close</button>
             </div>
         </div>

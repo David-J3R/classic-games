@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Solitaire</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --gray: #9ca3af;
+            --border-radius: 8px;
+            --card-width: 80px;
+            --card-height: calc(var(--card-width) * 1.4);
+            --game-board-bg-light: rgba(229, 231, 235, 0.7);
+            --game-board-bg-dark: rgba(31, 41, 55, 0.8);
+            --text-color-dark: #374151;
+            --card-bg-light: #ffffff;
+            --card-bg-dark: #2d3748; /* A bit lighter than main dark bg */
+            --card-border-light: #e2e8f0;
+            --card-border-dark: #4a5568;
+            --card-text-light: #1a202c;
+            --card-text-dark: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+            color: var(--light);
+            padding: 20px;
+            transition: background 0.5s ease;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 900px; /* Solitaire can be wider */
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, var(--light), #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls-panel {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 15px 20px;
+            width: 100%;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .score-info {
+            display: flex;
+            gap: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .score-info span {
+            padding: 8px 12px;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: var(--border-radius);
+        }
+
+        button, a.button {
+            padding: 10px 15px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--light);
+            background-color: var(--primary);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        button:hover, a.button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .theme-toggle {
+            background-color: transparent;
+            padding: 8px;
+            border-radius: 50%;
+        }
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .game-board-container {
+            background-color: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            margin-bottom: 20px;
+            width: 100%;
+            min-height: 400px; /* Placeholder height */
+            display: flex;
+            flex-direction: column; /* For stock/waste, foundations, tableau */
+            gap: 20px;
+        }
+
+        /* Solitaire specific areas */
+        .top-area, .tableau-area {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px; /* Gap between piles */
+        }
+
+        .stock-waste-area, .foundations-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .card-pile, .card {
+            width: var(--card-width);
+            height: var(--card-height);
+            border-radius: calc(var(--border-radius) / 2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem; /* For suit/rank */
+            font-weight: 600;
+            cursor: pointer;
+            position: relative; /* For stacking in tableau */
+        }
+
+        .card-pile.empty-pile {
+            border: 2px dashed var(--gray);
+            background-color: rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            background-color: var(--card-bg-light);
+            color: var(--card-text-light);
+            border: 1px solid var(--card-border-light);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .card.red { color: var(--danger); }
+        .card.black { color: var(--text-color-dark); } /* Default for light mode */
+
+        .card.back {
+            background-image: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            color: transparent; /* Hide text for back */
+        }
+        .card.back::after {
+            content: '\1F0A0'; /* Card back unicode, or use an SVG */
+            font-size: 3rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .tableau-pile .card:not(:last-child) {
+            margin-bottom: -calc(var(--card-height) * 0.75); /* Overlap cards */
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--light) 0%, #e5e7eb 100%);
+            color: var(--text-color-dark);
+            padding: 25px 30px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary-dark), var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal p {
+            margin-bottom: 20px;
+            font-size: 1rem;
+            color: #4b5563;
+        }
+
+        .status-icon {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .modal-button {
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            flex-grow: 1;
+        }
+
+        .primary-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+        .primary-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .secondary-button {
+            background-color: transparent;
+            color: var(--text-color-dark);
+            border: 2px solid var(--gray);
+            text-decoration: none; 
+            align-items: center; 
+            justify-content: center; 
+            display: flex; 
+        }
+        .secondary-button:hover {
+            border-color: var(--text-color-dark);
+            background-color: rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Dark Mode */
+        body.dark-mode {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+        }
+        body.dark-mode .game-title {
+            background: linear-gradient(to right, var(--light), #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        body.dark-mode .controls-panel,
+        body.dark-mode .game-board-container {
+            background-color: rgba(17, 24, 39, 0.75);
+        }
+        body.dark-mode .score-info span {
+            color: var(--light);
+            background-color: rgba(255,255,255,0.1);
+        }
+        body.dark-mode .card {
+            background-color: var(--card-bg-dark);
+            color: var(--card-text-dark);
+            border-color: var(--card-border-dark);
+        }
+        body.dark-mode .card.red { color: #f87171; } /* Lighter red for dark mode */
+        body.dark-mode .card.black { color: var(--card-text-dark); }
+
+        body.dark-mode .card.back {
+            background-image: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+        body.dark-mode .card.back::after {
+            color: rgba(255,255,255,0.3);
+        }
+        body.dark-mode .card-pile.empty-pile {
+            border-color: var(--gray);
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        body.dark-mode .modal-content {
+            background: linear-gradient(135deg, #2c3e50 0%, #1f2937 100%);
+            color: var(--light);
+        }
+        body.dark-mode .modal p {
+            color: var(--gray);
+        }
+        body.dark-mode .secondary-button {
+            color: var(--light);
+            border-color: var(--gray);
+        }
+        body.dark-mode .secondary-button:hover {
+            border-color: var(--light);
+            background-color: rgba(255,255,255,0.08);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .game-title { font-size: 2rem; }
+            .controls-panel {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 10px;
+            }
+            .controls, .score-info {
+                 width: 100%;
+                 justify-content: space-between; 
+                 margin-bottom: 10px;
+            }
+            .theme-toggle { align-self: center; }
+            :root {
+                --card-width: 60px; /* Smaller cards on smaller screens */
+            }
+            .game-board-container {
+                padding: 10px;
+            }
+            .top-area { flex-wrap: wrap; justify-content: center;}
+            .foundations-area { margin-top: 10px; }
+        }
+
+        @media (max-width: 480px) {
+            .controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .controls > * { width: 100%; justify-content: center; }
+            .score-info { font-size: 0.9rem; flex-direction: column; align-items: center; }
+            .score-info span { width: 80%; text-align: center; }
+            :root {
+                --card-width: 45px; /* Even smaller cards */
+            }
+            .card-pile, .card { font-size: 1.2rem; }
+            .card.back::after { font-size: 2rem; }
+            .modal-buttons { flex-direction: column; }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="game-title">Modern Solitaire</h1>
+        
+        <div class="controls-panel">
+            <div class="controls">
+                <a href="../index.html" class="button" id="home-button"><span>🏠</span> Home</a>
+                <button id="new-game-button"><span>🃏</span> New Game</button>
+            </div>
+            <div class="score-info">
+                <span id="score-display">Score: 0</span>
+                <span id="moves-display">Moves: 0</span>
+                <span id="time-display">Time: 00:00</span>
+            </div>
+            <button id="theme-toggle" class="theme-toggle" title="Toggle Dark Mode">🌓</button>
+        </div>
+        
+        <div class="game-board-container" id="game-board">
+            <div class="top-area">
+                <div class="stock-waste-area">
+                    <div class="card-pile empty-pile" id="stock-pile"></div>
+                    <div class="card-pile" id="waste-pile"></div> <!-- Can be empty or show cards -->
+                </div>
+                <div class="foundations-area">
+                    <div class="card-pile empty-pile" id="foundation-0"></div>
+                    <div class="card-pile empty-pile" id="foundation-1"></div>
+                    <div class="card-pile empty-pile" id="foundation-2"></div>
+                    <div class="card-pile empty-pile" id="foundation-3"></div>
+                </div>
+            </div>
+            <div class="tableau-area" id="tableau-piles">
+                <!-- Tableau piles will be generated by JS -->
+                <div class="card-pile tableau-pile" id="tableau-0"></div>
+                <div class="card-pile tableau-pile" id="tableau-1"></div>
+                <div class="card-pile tableau-pile" id="tableau-2"></div>
+                <div class="card-pile tableau-pile" id="tableau-3"></div>
+                <div class="card-pile tableau-pile" id="tableau-4"></div>
+                <div class="card-pile tableau-pile" id="tableau-5"></div>
+                <div class="card-pile tableau-pile" id="tableau-6"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="game-modal" class="modal">
+        <div class="modal-content">
+            <span id="modal-status-icon" class="status-icon">🎉</span>
+            <h2 id="modal-title">You Won!</h2>
+            <p>Final Score: <strong id="modal-score">0</strong> | Moves: <strong id="modal-moves">0</strong> | Time: <strong id="modal-time">00:00</strong></p>
+            <div class="modal-buttons">
+                <button id="modal-new-game-button" class="modal-button primary-button">Play Again</button>
+                <a href="../index.html" class="modal-button secondary-button">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // DOM Elements
+    const themeToggleButton = document.getElementById('theme-toggle');
+    const newGameButton = document.getElementById('new-game-button');
+    const modalNewGameButton = document.getElementById('modal-new-game-button');
+    const gameModal = document.getElementById('game-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalStatusIcon = document.getElementById('modal-status-icon');
+    const modalScoreDisplay = document.getElementById('modal-score');
+    const modalMovesDisplay = document.getElementById('modal-moves');
+    const modalTimeDisplay = document.getElementById('modal-time');
+
+    const scoreDisplay = document.getElementById('score-display');
+    const movesDisplay = document.getElementById('moves-display');
+    const timeDisplay = document.getElementById('time-display');
+
+    const stockPileElement = document.getElementById('stock-pile');
+    const wastePileElement = document.getElementById('waste-pile');
+    const foundationElements = [
+        document.getElementById('foundation-0'),
+        document.getElementById('foundation-1'),
+        document.getElementById('foundation-2'),
+        document.getElementById('foundation-3'),
+    ];
+    const tableauElements = document.getElementById('tableau-piles');
+
+    // Game State
+    let darkMode = false;
+    let score = 0;
+    let moves = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+
+    // --- Placeholder Game Logic Functions ---
+    function initGame() {
+        console.log("Initializing Solitaire game...");
+        score = 0;
+        moves = 0;
+        secondsElapsed = 0;
+        updateScoreboard();
+        resetTimer();
+        startTimer();
+        // TODO: Create deck, shuffle, deal cards to tableau, stock
+        renderGameBoard();
+        hideModal();
+    }
+
+    function renderGameBoard() {
+        console.log("Rendering game board...");
+        // Clear existing cards
+        stockPileElement.innerHTML = '';
+        wastePileElement.innerHTML = '';
+        foundationElements.forEach(f => f.innerHTML = '');
+        tableauElements.innerHTML = ''; // Clear old tableau piles
+
+        // Example: Create placeholder tableau piles if not already in HTML
+        // This part would be more dynamic in a real game
+        for (let i = 0; i < 7; i++) {
+            const tableauPile = document.createElement('div');
+            tableauPile.classList.add('card-pile', 'tableau-pile');
+            if (!document.getElementById(`tableau-${i}`)) { // If not hardcoded
+                 tableauPile.id = `tableau-${i}`;
+                 tableauElements.appendChild(tableauPile);
+            }
+            // TODO: Deal cards to this pile
+            // Example: Add a face-down card placeholder
+            // const card = createCardElement({ suit: 'back', rank: ''}, true);
+            // document.getElementById(`tableau-${i}`).appendChild(card);
+        }
+        // TODO: Render stock, waste, foundations, and tableau cards
+    }
+
+    function createCardElement(cardData, isFaceDown = false) {
+        const cardDiv = document.createElement('div');
+        cardDiv.classList.add('card');
+        if (isFaceDown) {
+            cardDiv.classList.add('back');
+        } else {
+            cardDiv.textContent = `${cardData.rank}${getSuitSymbol(cardData.suit)}`;
+            if (cardData.suit === '♥' || cardData.suit === '♦') {
+                cardDiv.classList.add('red');
+            } else {
+                cardDiv.classList.add('black');
+            }
+        }
+        // TODO: Add event listeners for dragging/clicking
+        return cardDiv;
+    }
+
+    function getSuitSymbol(suit) {
+        const symbols = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
+        return symbols[suit.toLowerCase()] || suit;
+    }
+
+    function handleCardClick(event) {
+        console.log("Card clicked:", event.target);
+        // TODO: Implement card click logic (select, move, draw from stock)
+    }
+
+    function checkWinCondition() {
+        // TODO: Check if all cards are on foundations
+        // If win: showWinModal();
+    }
+
+    function updateScoreboard() {
+        scoreDisplay.textContent = `Score: ${score}`;
+        movesDisplay.textContent = `Moves: ${moves}`;
+    }
+
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const minutes = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const seconds = (secondsElapsed % 60).toString().padStart(2, '0');
+            timeDisplay.textContent = `Time: ${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        secondsElapsed = 0;
+        timeDisplay.textContent = 'Time: 00:00';
+    }
+
+    function showWinModal() {
+        modalTitle.textContent = "You Won!";
+        modalStatusIcon.textContent = "🎉";
+        modalScoreDisplay.textContent = score;
+        modalMovesDisplay.textContent = moves;
+        const minutes = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+        const seconds = (secondsElapsed % 60).toString().padStart(2, '0');
+        modalTimeDisplay.textContent = `${minutes}:${seconds}`;
+        gameModal.classList.add('show');
+        clearInterval(timerInterval);
+    }
+    
+    function showGameOverModal() { // Could be used for impossible states or future features
+        modalTitle.textContent = "Game Over";
+        modalStatusIcon.textContent = "😕";
+        // Populate other modal fields as needed
+        gameModal.classList.add('show');
+        clearInterval(timerInterval);
+    }
+
+    function hideModal() {
+        gameModal.classList.remove('show');
+    }
+
+    function toggleDarkMode() {
+        darkMode = !darkMode;
+        document.body.classList.toggle('dark-mode', darkMode);
+        themeToggleButton.textContent = darkMode ? '☀️' : '🌓';
+        localStorage.setItem('solitaireDarkMode', darkMode.toString());
+        // Potentially re-render cards if their appearance changes significantly with theme
+        renderGameBoard(); 
+    }
+
+    // Event Listeners
+    themeToggleButton.addEventListener('click', toggleDarkMode);
+    newGameButton.addEventListener('click', initGame);
+    modalNewGameButton.addEventListener('click', () => {
+        hideModal();
+        initGame();
+    });
+    // Add event listener to game board for card clicks (event delegation)
+    document.getElementById('game-board').addEventListener('click', handleCardClick);
+
+    // Initial Load
+    window.addEventListener('load', () => {
+        const savedDarkMode = localStorage.getItem('solitaireDarkMode');
+        if (savedDarkMode === 'true') {
+            darkMode = true;
+            document.body.classList.add('dark-mode');
+            themeToggleButton.textContent = '☀️';
+        }
+        initGame(); // Start a new game on load
+    });
+
+</script>
+</body>
+</html>
