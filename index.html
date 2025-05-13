@@ -70,6 +70,8 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             text-decoration: none;
             color: var(--light);
+            display: flex; /* Added */
+            flex-direction: column; /* Added */
         }
 
         .game-card:hover {
@@ -104,6 +106,7 @@
             cursor: pointer;
             transition: all 0.2s;
             text-decoration: none;
+            margin-top: auto; /* Added */
         }
 
         .play-button:hover {
@@ -145,11 +148,11 @@
                 <span class="play-button">Play Minesweeper</span>
             </a>
 
-            <div class="game-card coming-soon">
+            <a href="snake/index.html" class="game-card">
                 <h2>Snake</h2>
                 <p>Control a growing snake to eat food. Don't hit the walls or yourself!</p>
-                <span class="play-button">Coming Soon</span>
-            </div>
+                <span class="play-button">Play Snake</span>
+            </a>
 
             <div class="game-card coming-soon">
                 <h2>Solitaire</h2>
