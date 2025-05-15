@@ -4,9 +4,9 @@ A collection of classic games implemented primarily using HTML, CSS, and JavaScr
 
 ## Project Objective
 
-This project serves as an exploration and test of the capabilities of the AI model **Gemini 1.5 Pro Preview**. The primary goal was to have the AI develop these classic games with minimal manual intervention, to assess its coding proficiency and problem-solving skills in a practical web development context.
+This project serves as an exploration and test of the capabilities of the AI model **Gemini 1.5 Pro Preview** & **Claude 3.7 Sonnet**. The primary goal was to have the AI develop these classic games with minimal manual intervention, to assess its coding proficiency and problem-solving skills in a practical web development context.
 
-The Minesweeper game, in particular, offers a point of comparison against a version previously developed by the user in a programming class, providing a benchmark for the AI's output.
+The Minesweeper game, in particular, offers a point of comparison against a version I previously developed in a programming class.
 
 ## Games Implemented
 
@@ -16,7 +16,7 @@ The Minesweeper game, in particular, offers a point of comparison against a vers
 
 ## Project Structure
 
-*   `README.md`: This file, containing information about the project.
+*   `README.md`: This file contains information about the project.
 *   `index.html`: The main home page for the game collection, allowing navigation to each game.
 *   `minesweeper/`:
     *   `index.html`: Contains the HTML, CSS, and JavaScript for the Minesweeper game.
@@ -38,7 +38,7 @@ The Minesweeper game, in particular, offers a point of comparison against a vers
 
 ## Development Notes
 
-*   The code for each game is largely AI-generated (by Gemini 1.5 Pro Preview).
+*   The code for each game is largely AI-generated (by Gemini 1.5 Pro Preview & Claude 3.7 Sonnet).
 *   The development process was iterative, with prompts given to the AI to build features, add styling, and debug issues.
 *   Each game is self-contained within its respective `index.html` file, including HTML structure, CSS styles, and JavaScript logic. This was a deliberate choice to simplify the AI's task of managing and modifying individual games.
 *   The project was completed on May 14, 2025.
